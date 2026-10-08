@@ -158,6 +158,12 @@ input.field:focus,select.field:focus,textarea.field:focus{outline:none;border-co
 .usebar .fill.warn{background:var(--warn)} .usebar .fill.minus{background:var(--minus)}
 .usebar .mark{position:absolute;top:-4px;bottom:-4px;width:2px;background:var(--ink);opacity:.55;border-radius:2px}
 .usebar-legend{display:flex;justify-content:space-between;font-size:12px;color:var(--ink-2);font-variant-numeric:tabular-nums}
+.invest-row{display:flex;align-items:center;gap:var(--s3);background:var(--surface);border-radius:var(--r);padding:var(--s2) var(--s3);cursor:pointer}
+.invest-row div{display:flex;flex-direction:column;min-width:0}
+.invest-row b{font-weight:800}
+.invest-row span{font-size:12px;color:var(--ink-2)}
+.txrow .a.inv{color:var(--accent)}
+.txfoot.sub{border-top:0;padding-top:0;font-weight:700;color:var(--ink-2);font-size:14px}
 .minis{display:grid;grid-template-columns:repeat(3,1fr);gap:var(--s2);margin-top:var(--s2)}
 .minis div{background:var(--surface);border-radius:var(--r);padding:var(--s2) var(--s3);display:flex;flex-direction:column}
 .minis b{font-size:17px;font-weight:800;font-variant-numeric:tabular-nums;line-height:1.4}
@@ -448,6 +454,9 @@ details.more summary::-webkit-details-marker{display:none}
   <symbol id="c-shield" viewBox="0 0 24 24"><path d="M12 3l7 3v5c0 4.6-3 8.2-7 10-4-1.8-7-5.4-7-10V6z"/><path d="M9 12l2 2 4-4"/></symbol>
   <symbol id="c-book" viewBox="0 0 24 24"><path d="M5 4.5A1.5 1.5 0 0 1 6.5 3H19v15H6.5A1.5 1.5 0 0 0 5 19.5zM5 19.5A1.5 1.5 0 0 0 6.5 21H19"/></symbol>
   <symbol id="c-gift" viewBox="0 0 24 24"><rect x="4" y="9" width="16" height="11" rx="2"/><path d="M3 9h18M12 9v11M12 9C10.5 5 7 5 7 7s3 2 5 2zM12 9c1.5-4 5-4 5-2s-3 2-5 2z"/></symbol>
+  <symbol id="c-plane" viewBox="0 0 24 24"><path d="M10.2 13.8L4 11.5l1.4-1.4 6.6.6 4.3-4.3a1.9 1.9 0 0 1 2.7 2.7L14.7 13.4l.6 6.6-1.4 1.4-2.3-6.2-3 3v2.3l-1.2 1.2-1-3.3-3.3-1 1.2-1.2H7.6z"/></symbol>
+  <symbol id="c-palette" viewBox="0 0 24 24"><path d="M12 3a9 9 0 1 0 0 18c1.1 0 1.6-.8 1.6-1.6 0-1.1-.9-1.4-.9-2.4 0-.9.7-1.5 1.7-1.5H16a5 5 0 0 0 5-5C21 6.4 17 3 12 3z"/><circle cx="7.5" cy="11" r="1.1"/><circle cx="10.5" cy="7.3" r="1.1"/><circle cx="15" cy="7.8" r="1.1"/></symbol>
+  <symbol id="c-sprout" viewBox="0 0 24 24"><path d="M12 21v-8.5M12 12.5c0-4.2 2.8-6.8 7.5-6.8 0 4.2-2.8 6.8-7.5 6.8zM12 15c0-3.3-2.3-5.4-6-5.4 0 3.3 2.3 5.4 6 5.4z"/><path d="M8 21h8"/></symbol>
   <symbol id="c-dots" viewBox="0 0 24 24"><circle cx="6" cy="12" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="18" cy="12" r="1.6"/></symbol>
   <symbol id="c-q" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M9.6 9.3a2.5 2.5 0 1 1 3.4 2.3c-.6.3-1 .8-1 1.5v.6M12 16.8v.01"/></symbol>
   <symbol id="i-up" viewBox="0 0 24 24"><path d="M12 19V5M6 11l6-6 6 6"/></symbol>
@@ -486,11 +495,14 @@ details.more summary::-webkit-details-marker{display:none}
 
 <script>
 /* ============ 定数 ============ */
-const CATS = ['食費','外食費','日用品','交通費','娯楽費','通信・サブスク','水道光熱費','衣服・美容','医療・健康','ネット通販','住居','保険','教育','交際費','その他','未分類'];
+const CATS = ['食費','外食費','日用品','交通費','娯楽費','旅行','趣味','通信・サブスク','水道光熱費','衣服・美容','医療・健康','ネット通販','住居','保険','教育','交際費','投資','その他','未分類'];
+const INVEST = '投資'; // 支出に数えないカテゴリ（NISA の積立など）
+const isSpend = c => c !== INVEST;
+const SPEND_CATS = CATS.filter(isSpend);
 const UNCAT = '未分類';
 // カテゴリの色（検証済み8色を主なカテゴリに固定割り当て。残りはグレーで「ほか」にまとめる）とアイコン
 const CAT_META = {
-  '住居':['--c1','house'], '外食費':['--c2','fork'], '食費':['--c3','cart'], '通信・サブスク':['--c4','phone'],
+  '住居':['--c1','house'], '外食費':['--c2','fork'], '食費':['--c3','cart'], '旅行':['--c4','plane'], '通信・サブスク':['--c0','phone'], '趣味':['--c0','palette'], '投資':['--accent','sprout'],
   '娯楽費':['--c5','star'], '日用品':['--c6','bottle'], '交通費':['--c7','train'], '衣服・美容':['--c8','shirt'],
   '水道光熱費':['--c0','bulb'], '医療・健康':['--c0','heart'], 'ネット通販':['--c0','box'], '保険':['--c0','shield'],
   '教育':['--c0','book'], '交際費':['--c0','gift'], 'その他':['--c0','dots'], '未分類':['--warn','q'] };
@@ -499,10 +511,13 @@ const catIcon = (c, cls='') => `<span class="cat-ic ${cls}" style="--c:${catVar(
 
 // 店名キーワード辞書（上から順に判定。具体的なものを先に置く）
 const DICT = [
+  ['投資',['楽天証券','ラクテンショウケン','ラクテンシヨウケン','SBI証券','SBIショウケン','SBI','マネックス','MONEX','カブコム','松井証券','PAYPAY証券','大和コネクト','証券','ショウケン','シヨウケン','NISA','ニーサ','つみたて','ツミタテ','積立','投信','トウシン']],
+  ['旅行',['じゃらん','楽天トラベル','一休','JTB','HIS','エイチ・アイ・エス','近畿日本ツーリスト','日本旅行','EXPEDIA','エクスペディア','BOOKING.COM','AGODA','アゴダ','AIRBNB','TRIP.COM','ホテル','HOTEL','旅館','温泉','INN','リゾート','RESORT','ANA','JAL','ピーチ','PEACH','スカイマーク','ジェットスター','JETSTAR','航空','AIRLINE','AIRLINES','空港','AIRPORT','免税','DUTY FREE','レンタカー']],
+  ['趣味',['ゴルフ','GOLF','釣具','フィッシング','FISHING','上州屋','イシグロ','模型','ホビー','HOBBY','プラモ','楽器','島村楽器','イシバシ','手芸','ユザワヤ','画材','世界堂','カメラ','キタムラ','アウトドア','モンベル','MONT-BELL','スノーピーク','SNOW PEAK','好日山荘','ゼビオ','XEBIO','スポーツデポ','アルペン','ALPEN','スポーツオーソリティ','ヴィクトリア']],
   ['通信・サブスク',['AMAZON PRIME','アマゾンプライム','PRIME VIDEO','NETFLIX','ネットフリックス','SPOTIFY','APPLE.COM/BILL','APPLE COM BILL','ICLOUD','GOOGLE STORAGE','GOOGLE ONE','YOUTUBE','DISNEY PLUS','DISNEY+','ディズニープラス','U-NEXT','HULU','DAZN','ABEMA','DMM','OPENAI','CHATGPT','ANTHROPIC','CLAUDE.AI','ADOBE','MICROSOFT','NINTENDO SWITCH ONLINE','PLAYSTATION PLUS','ドコモ','DOCOMO','KDDI','AU ','ソフトバンク','SOFTBANK','楽天モバイル','UQ','ワイモバイル','Y!MOBILE','AHAMO','POVO','LINEMO','IIJ','NURO','OCN','ビッグローブ','BIGLOBE','光回線','ケーブルテレビ']],
   ['外食費',['UBER EATS','UBEREATS','ウーバーイーツ','出前館','WOLT','マクドナルド','MCDONALD','スターバックス','STARBUCKS','ドトール','DOUTOR','タリーズ','TULLY','コメダ','すき家','吉野家','松屋','なか卯','ガスト','サイゼリヤ','スシロー','くら寿司','はま寿司','かっぱ寿司','回転寿','丸亀','はなまる','CoCo壱','ココイチ','モスバーガー','MOS BURGER','ケンタッキー','KFC','ミスタードーナツ','ミスド','王将','鳥貴族','牛角','一蘭','一風堂','ココス','デニーズ','ジョイフル','バーミヤン','びっくりドンキー','8番らーめん','8番ラーメン','ゴーゴーカレー','チャンピオンカレー','ほっともっと','ほっかほっか','やよい軒','大戸屋','リンガーハット','天下一品','幸楽苑','ペッパーランチ','いきなりステーキ','サブウェイ','SUBWAY','ドミノ','DOMINO','ピザハット','PIZZA','レストラン','RESTAURANT','食堂','居酒屋','酒場','CAFE','カフェ','珈琲','COFFEE','焼肉','ラーメン','らーめん','寿司','鮨','そば','うどん','ダイニング','DINING','ビストロ','BISTRO','バル','ベーカリー','BAKERY']],
-  ['娯楽費',['イオンシネマ','TOHO','シネマ','CINEMA','映画','カラオケ','ビッグエコー','まねきねこ','ジャンカラ','ボウリング','ROUND1','ラウンドワン','ゲームセンター','NINTENDO','任天堂','PLAYSTATION','STEAM','書店','ブックオフ','BOOK','TSUTAYA','蔦屋','ヴィレッジヴァンガード','チケット','ぴあ','イープラス','ローチケ','遊園地','USJ','ディズニー','温泉','じゃらん','楽天トラベル','一休','ホテル','HOTEL','旅館','動物園','水族館','美術館','博物館','ゴルフ','GOLF','パチンコ','競馬','ヨドバシ','ビックカメラ','ケーズデンキ','エディオン']],
-  ['交通費',['JR','新幹線','モバイルSUICA','MOBILE SUICA','SUICA','ICOCA','PASMO','北陸鉄道','北鉄','鉄道','バス','タクシー','TAXI','GO ','UBER','ETC','NEXCO','高速道路','ENEOS','エネオス','出光','IDEMITSU','コスモ石油','シェル','SHELL','宇佐美','ガソリン','石油','駐車','パーキング','PARKING','タイムズ','TIMES','三井のリパーク','ANA','JAL','ピーチ','PEACH','スカイマーク','航空','AIRLINE','レンタカー','カーシェア']],
+  ['娯楽費',['イオンシネマ','TOHO','シネマ','CINEMA','映画','カラオケ','ビッグエコー','まねきねこ','ジャンカラ','ボウリング','ROUND1','ラウンドワン','ゲームセンター','NINTENDO','任天堂','PLAYSTATION','STEAM','書店','ブックオフ','BOOK','TSUTAYA','蔦屋','ヴィレッジヴァンガード','チケット','ぴあ','イープラス','ローチケ','遊園地','USJ','ディズニー','動物園','水族館','美術館','博物館','パチンコ','競馬','ヨドバシ','ビックカメラ','ケーズデンキ','エディオン']],
+  ['交通費',['JR','新幹線','モバイルSUICA','MOBILE SUICA','SUICA','ICOCA','PASMO','北陸鉄道','北鉄','鉄道','バス','タクシー','TAXI','GO ','UBER','ETC','NEXCO','高速道路','ENEOS','エネオス','出光','IDEMITSU','コスモ石油','シェル','SHELL','宇佐美','ガソリン','石油','駐車','パーキング','PARKING','タイムズ','TIMES','三井のリパーク','カーシェア']],
   ['日用品',['クスリのアオキ','スギ薬局','マツモトキヨシ','マツキヨ','ウエルシア','ツルハ','コスモス','ゲンキー','サンドラッグ','ココカラファイン','ドラッグ','DRUG','ダイソー','DAISO','セリア','キャンドゥ','ニトリ','無印良品','MUJI','カインズ','コメリ','DCM','ホームセンター','ロフト','ハンズ','ドン・キホーテ','ドンキホーテ','ドンキ','ホームセンター','100円','IKEA','イケア']],
   ['衣服・美容',['ユニクロ','UNIQLO','GU ','ジーユー','ZARA','H&M','しまむら','ABCマート','ABC-MART','西松屋','ワークマン','美容','ヘアー','ヘア','HAIR','サロン','SALON','理容','カット','ネイル','NAIL','コスメ','化粧']],
   ['医療・健康',['病院','クリニック','CLINIC','医院','歯科','眼科','皮膚科','小児科','調剤','薬局','整骨','接骨','整体','フィットネス','FITNESS','エニタイム','ANYTIME','チョコザップ','CHOCOZAP','ジム','GYM']],
@@ -573,11 +588,20 @@ async function refresh(force=false){
       const j = await api('load');
       state = Object.assign(blank(), j.data, {ver:j.ver}); writeJSON(CACHE_KEY, state);
       if(!allMonths().includes(ui.month) && ui.month!==ymNow()) ui.month = latestMonth()||ymNow();
-      render();
+      render(); autoSortNew();
     }
     sync = {status:'ok', at:Date.now(), msg:''};
   }catch(e){ sync = {status: e.code==='auth'?'auth':'offline', at:sync.at, msg:e.message}; }
   renderSaveState();
+}
+// 新しく追加したカテゴリ（旅行・趣味・投資）に当てはまる既存の明細を振り分ける。手で直した明細（lock）はそのまま
+const NEW_CATS = ['旅行','趣味','投資'];
+function autoSortNew(){
+  if(demo) return;
+  const ops=[];
+  state.tx.forEach(t=>{ if(t.lock) return; const c=categorize(t.store);
+    if(NEW_CATS.includes(c) && t.cat!==c){ t.cat=c; ops.push({op:'txSet', id:t.id, fields:{cat:c}}); } });
+  if(ops.length){ commit(ops); render(); toast(`新しいカテゴリに${ops.length}件を振り分けました`); }
 }
 function setupLink(withName){
   const o = {u:cfg.url, k:cfg.key}; if(withName) o.n = cfg.name;
@@ -651,11 +675,14 @@ function monthData(m){
   const md = state.months[m] || {};
   const tx = state.tx.filter(t=>t.month===m);
   const byCat = {}; CATS.forEach(c=>byCat[c]=0);
-  let card=0, manual=0;
-  tx.forEach(t=>{ byCat[t.cat]=(byCat[t.cat]||0)+t.amount; if(t.src==='manual') manual+=t.amount; else card+=t.amount; });
-  const expense = card+manual;
+  let card=0, manual=0, invest=0;
+  tx.forEach(t=>{ byCat[t.cat]=(byCat[t.cat]||0)+t.amount;
+    if(!isSpend(t.cat)) invest+=t.amount; else if(t.src==='manual') manual+=t.amount; else card+=t.amount; });
+  const expense = card+manual;  // 投資は含めない
   const income = (md.income||0)+(md.other||0);
-  return { m, tx, byCat, card, manual, expense, income, salary:md.income||0, other:md.other||0, net: income-expense, rate: income? (income-expense)/income : NaN, hasIncome: income>0 };
+  const net = income-expense;
+  return { m, tx, byCat, card, manual, expense, invest, income, salary:md.income||0, other:md.other||0, net, rate: income? net/income : NaN,
+    left: net-invest, hasIncome: income>0, spendCount: tx.filter(t=>isSpend(t.cat)).length };
 }
 function baseline(m){
   // 直近3か月（データがある月）の平均
@@ -689,7 +716,7 @@ function evaluate(m){
   if(b){
     if(!inProgress && d.expense < b.expense*0.95) good.push(['支出合計が'+nameCmp+'より'+yen(b.expense-d.expense)+'少ない', `今月 ${yen(d.expense)} ／ ${nameCmp} ${yen(b.expense)}`]);
     const ups=[], downs=[];
-    CATS.filter(c=>c!==UNCAT).forEach(c=>{
+    SPEND_CATS.filter(c=>c!==UNCAT).forEach(c=>{
       const diff = d.byCat[c]-b.byCat[c];
       if(diff>=3000 && diff >= b.byCat[c]*0.15) ups.push([c,diff]);
       if(!inProgress && d.byCat[c]>0 && -diff>=3000 && -diff >= b.byCat[c]*0.10) downs.push([c,-diff]);
@@ -703,6 +730,13 @@ function evaluate(m){
     info.push(['比較は来月から', '2か月分以上たまると、前月や平均と比べた評価が出ます。']);
   }
 
+  // 投資
+  if(d.invest>0){
+    const bi = b ? b.byCat[INVEST] : null;
+    good.push([`${yen(d.invest)}を投資にまわした`, d.hasIncome
+      ? `支出とは別に数えています。投資を含めて、手取りの${pct(d.rate,0)}（${yen(d.net)}）が資産として残った計算です。${d.left<0?`手元の現金は${yen(-d.left)}減りました。`:`手元の現金も${yen(d.left)}増えました。`}`
+      : '支出とは別に数えています。'+(bi?`${b.n===1?'前月':'平均'}は${yen(bi)}でした。`:'')]);
+  }
   // 予算
   const within=[], over=[];
   CATS.forEach(c=>{ const v=bud[c]; if(!v) return; if(d.byCat[c]>v) over.push([c,d.byCat[c]-v]); else within.push(c); });
@@ -723,7 +757,7 @@ function evaluate(m){
   const subs = d.tx.filter(t=>t.cat==='通信・サブスク');
   if(subs.length>=4) info.push([`通信・サブスクが${subs.length}件で${yen(subs.reduce((s,t)=>s+t.amount,0))}`, '使っていないサービスがないか、年に一度は見直す対象です。']);
   // 高額
-  const large = d.tx.filter(t=>t.amount>=30000);
+  const large = d.tx.filter(t=>t.amount>=30000 && isSpend(t.cat));
   if(large.length) info.push([`3万円以上の支出が${large.length}件`, large.slice(0,3).map(t=>`${t.store} ${yen(t.amount)}`).join('、')]);
   // 未分類
   const un = d.tx.filter(t=>t.cat===UNCAT);
@@ -840,6 +874,10 @@ function renderMonth(){
       <div><span class="label">支出</span><b>${yen(d.expense)}</b></div>
       <div><span class="label">残せた割合</span><b class="${v==='minus'?'over':''}">${d.hasIncome? pct(d.rate,0) : '—'}</b></div>
     </div>
+    ${d.invest>0 ? `<div class="invest-row" data-act="gotoCat" data-cat="${INVEST}">
+      ${catIcon(INVEST,'sm')}
+      <div><b>投資にまわしたお金 ${yen(d.invest)}</b><span>支出には含めていません${d.hasIncome?` ・ 投資後に手元に残ったのは <b class="${d.left<0?'over':''}">${signYen(d.left)}</b>`:''}</span></div>
+    </div>` : ''}
   </section>`;
 
   const income = `
@@ -853,7 +891,7 @@ function renderMonth(){
   </section>`;
 
   // 使い道：色つきカテゴリはそのまま、グレーのカテゴリは「ほか」にまとめてドーナツに
-  const rows = CATS.map(c=>({c, v:d.byCat[c], base: b? b.byCat[c] : null})).filter(r=>r.v>0 || state.budgets[r.c]);
+  const rows = SPEND_CATS.map(c=>({c, v:d.byCat[c], base: b? b.byCat[c] : null})).filter(r=>r.v>0 || state.budgets[r.c]);
   rows.sort((x,y)=>y.v-x.v);
   const segs = []; let other = 0;
   rows.forEach(r=>{ if(r.v<=0) return; if((CAT_META[r.c]||['--c0'])[0]==='--c0') other+=r.v; else segs.push({v:r.v, col:catVar(r.c), c:r.c}); });
@@ -864,7 +902,7 @@ function renderMonth(){
   <section class="panel">
     <div class="panel-h"><h2>何に使った？</h2><span class="sub">押すとそのカテゴリの明細を表示</span></div>
     ${rows.length ? `<div class="uses-wrap"><div class="uses">
-      <div class="donut">${donut}<div class="ctr"><span>${mo}月の支出</span><b>${yen(d.expense)}</b><span>${d.tx.length}件</span></div></div>
+      <div class="donut">${donut}<div class="ctr"><span>${mo}月の支出</span><b>${yen(d.expense)}</b><span>${d.spendCount}件</span></div></div>
       <ul class="catlist">${rows.map(r=>{
         const diff = r.base==null ? null : r.v - r.base, bud = state.budgets[r.c];
         const sub = bud ? (r.v>bud ? `予算を ${yen(r.v-bud)} オーバー` : `予算まであと ${yen(bud-r.v)}`) : `支出の ${d.expense? pct(r.v/d.expense,0):'—'}`;
@@ -949,7 +987,8 @@ function renderTx(){
   const q = norm(ui.txQuery);
   let list = d.tx.filter(t=>(!ui.txFilterCat || t.cat===ui.txFilterCat) && (!q || norm(t.store).includes(q)));
   list.sort((a,b)=> b.date.localeCompare(a.date) || b.amount-a.amount);
-  const total = list.reduce((s,t)=>s+t.amount,0);
+  const total = list.filter(t=>isSpend(t.cat)).reduce((s,t)=>s+t.amount,0);
+  const invTotal = list.filter(t=>!isSpend(t.cat)).reduce((s,t)=>s+t.amount,0);
   const days = []; list.forEach(t=>{ const last=days[days.length-1]; if(last && last.date===t.date) last.items.push(t); else days.push({date:t.date, items:[t]}); });
   const W = '日月火水木金土';
   const dayLabel = ds => { const dt=new Date(ds+'T00:00:00'); return `${dt.getMonth()+1}月${dt.getDate()}日（${W[dt.getDay()]}）`; };
@@ -972,11 +1011,12 @@ function renderTx(){
       ${g.items.map(t=>`<div class="txrow">
         ${catIcon(t.cat)}
         <span class="s"><b title="${esc(t.store)}">${esc(t.store)}</b><span class="meta">${catSelect(t.cat, `data-txcat="${t.id}" aria-label="カテゴリ"`)}${t.src==='manual'?`<small>手入力${t.by?'・'+esc(t.by):''}</small>`:''}</span></span>
-        <span class="a num ${t.amount<0?'neg':''}">${yen(t.amount)}</span>
+        <span class="a num ${t.amount<0?'neg':''} ${isSpend(t.cat)?'':'inv'}">${yen(t.amount)}</span>
         <button class="iconbtn x" data-act="delTx" data-id="${t.id}" aria-label="削除">${ico('trash')}</button>
       </div>`).join('')}`).join('')}
     </div>
-    <div class="txfoot"><span>合計</span><span class="num">${yen(total)}</span></div>`
+    <div class="txfoot"><span>支出の合計</span><span class="num">${yen(total)}</span></div>
+    ${invTotal? `<div class="txfoot sub"><span>投資（支出に含めない）</span><span class="num">${yen(invTotal)}</span></div>`:''}`
     : `<div class="eval"><p class="empty">${d.tx.length?'条件に合う明細はありません。':'この月の明細はまだありません。'}</p></div>`}
   </section>`;
 }
@@ -987,7 +1027,8 @@ function renderTrend(){
   if(!ms.length) return `<section class="panel"><div class="eval"><p class="empty">まだデータがありません。月の収支タブから明細を読み込んでください。</p></div></section>`;
   const ds = ms.map(monthData);
   const shown = ds.slice(-12);
-  const usedCats = CATS.filter(c=>ds.some(d=>d.byCat[c]));
+  const usedCats = SPEND_CATS.filter(c=>ds.some(d=>d.byCat[c]));
+  const anyInv = ds.some(d=>d.invest>0);
   const totIncome = ds.reduce((s,d)=>s+d.income,0), totExp = ds.reduce((s,d)=>s+d.expense,0);
   const withInc = ds.filter(d=>d.hasIncome);
   return `
@@ -1004,13 +1045,13 @@ function renderTrend(){
   <section class="panel">
     <div class="panel-h"><h2>月別の一覧</h2><span class="sub">押すとその月を表示</span></div>
     <div class="scrollx"><table class="t">
-      <thead><tr><th>月</th><th class="num">手取り</th><th class="num">その他収入</th><th class="num">支出</th><th class="num">収支</th><th class="num">黒字率</th><th>判定</th></tr></thead>
+      <thead><tr><th>月</th><th class="num">手取り</th><th class="num">その他収入</th><th class="num">支出</th><th class="num">収支</th><th class="num">黒字率</th>${anyInv?'<th class="num">投資</th>':''}<th>判定</th></tr></thead>
       <tbody>${ds.slice().reverse().map(d=>`<tr class="click" data-act="gotoMonth" data-m="${d.m}">
         <td>${ymLabel(d.m)}</td><td class="num">${d.salary?yen(d.salary):'—'}</td><td class="num muted">${d.other?yen(d.other):'—'}</td>
         <td class="num">${yen(d.expense)}</td><td class="num ${d.hasIncome&&d.net<0?'over':''}">${d.hasIncome?signYen(d.net):'—'}</td>
-        <td class="num">${d.hasIncome?pct(d.rate):'—'}</td>
+        <td class="num">${d.hasIncome?pct(d.rate):'—'}</td>${anyInv?`<td class="num">${d.invest?yen(d.invest):'<span class="muted">—</span>'}</td>`:''}
         <td>${!d.hasIncome?'<span class="muted">未判定</span>': d.net>=0?'<span class="tag plus">黒字</span>':'<span class="tag minus">赤字</span>'}</td></tr>`).join('')}</tbody>
-      <tfoot><tr><td>合計</td><td class="num">${yen(ds.reduce((s,d)=>s+d.salary,0))}</td><td class="num">${yen(ds.reduce((s,d)=>s+d.other,0))}</td><td class="num">${yen(totExp)}</td><td class="num">${signYen(totIncome-totExp)}</td><td class="num">${totIncome?pct((totIncome-totExp)/totIncome):'—'}</td><td></td></tr></tfoot>
+      <tfoot><tr><td>合計</td><td class="num">${yen(ds.reduce((s,d)=>s+d.salary,0))}</td><td class="num">${yen(ds.reduce((s,d)=>s+d.other,0))}</td><td class="num">${yen(totExp)}</td><td class="num">${signYen(totIncome-totExp)}</td><td class="num">${totIncome?pct((totIncome-totExp)/totIncome):'—'}</td>${anyInv?`<td class="num">${yen(ds.reduce((s,d)=>s+d.invest,0))}</td>`:''}<td></td></tr></tfoot>
     </table></div>
   </section>
   <section class="panel">
@@ -1075,7 +1116,7 @@ function renderSettings(){
 
   <section class="panel">
     <div class="panel-h"><h2>カテゴリごとの月予算</h2><span class="sub">入れたカテゴリだけ「予算残」と超過の評価が出ます</span></div>
-    <div class="budget-grid">${CATS.filter(c=>c!==UNCAT).map(c=>`<label>${catIcon(c,'sm')}<span>${c}</span><span class="money-in"><input class="field" inputmode="numeric" data-budget="${esc(c)}" value="${state.budgets[c]?Number(state.budgets[c]).toLocaleString('ja-JP'):''}" placeholder="未設定"></span></label>`).join('')}</div>
+    <div class="budget-grid">${SPEND_CATS.filter(c=>c!==UNCAT).map(c=>`<label>${catIcon(c,'sm')}<span>${c}</span><span class="money-in"><input class="field" inputmode="numeric" data-budget="${esc(c)}" value="${state.budgets[c]?Number(state.budgets[c]).toLocaleString('ja-JP'):''}" placeholder="未設定"></span></label>`).join('')}</div>
   </section>
 
   <section class="panel">
@@ -1297,9 +1338,9 @@ function startDemo(){
     ['ENEOS 金沢北インター SS',[4800,6900]],['JR西日本 金沢駅',[1200,6800]],['タイムズ 金沢香林坊',[400,1200]],
     ['クスリのアオキ 広岡店',[1100,4300]],['ダイソー フォーラス店',[330,1650]],['ニトリ 金沢店',[2400,8900]],
     ['イオンシネマ 金沢',[1900,3800]],['ラウンドワン 金沢店',[1800,4200]],['TSUTAYA 金沢店',[880,2600]],
-    ['ユニクロ 金沢フォーラス店',[2990,6990]],['AMAZON.CO.JP',[1200,6800]],['楽天市場',[2200,9800]],['ヘアサロン エム',[5500,5500]],
+    ['ユニクロ 金沢フォーラス店',[2990,6990]],['AMAZON.CO.JP',[1200,6800]],['楽天市場',[2200,9800]],['ヘアサロン エム',[5500,5500]],['じゃらん 和倉温泉 加賀屋',[18000,36000]],['モンベル 金沢店',[2200,8800]],
   ];
-  const fixed = [['NETFLIX.COM',1590,'03'],['SPOTIFY',980,'05'],['ドコモご利用料金',8420,'10'],['北陸電力',9600,'15'],['北陸ガス',4300,'16'],['APPLE.COM/BILL',400,'20']];
+  const fixed = [['ラクテンショウケン トウシン',33000,'27'],['NETFLIX.COM',1590,'03'],['SPOTIFY',980,'05'],['ドコモご利用料金',8420,'10'],['北陸電力',9600,'15'],['北陸ガス',4300,'16'],['APPLE.COM/BILL',400,'20']];
   const rnd = (a,b)=>Math.round((a+Math.random()*(b-a))/10)*10;
   months.forEach((m,mi)=>{
     const days = new Date(+m.slice(0,4), +m.slice(5), 0).getDate();
