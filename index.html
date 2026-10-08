@@ -321,6 +321,13 @@ details.more summary::-webkit-details-marker{display:none}
 .parse-sum div{display:flex;flex-direction:column}
 .parse-sum b{font-size:18px;font-weight:800;font-variant-numeric:tabular-nums}
 .preview{border:1.5px solid var(--rule);border-radius:var(--r);max-height:46vh;overflow:auto}
+.impmode{display:flex;flex-direction:column;gap:var(--s2)}
+.impmode label{display:flex;gap:var(--s3);align-items:flex-start;padding:var(--s3);border-radius:var(--r);background:var(--surface-2);cursor:pointer}
+.impmode label:has(input:checked){background:var(--accent-soft)}
+.impmode input{margin-top:5px;accent-color:var(--accent)}
+.impmode span{display:flex;flex-direction:column;gap:6px;min-width:0}
+.impmode small{font-size:12px;color:var(--ink-2);font-variant-numeric:tabular-nums}
+.impmode select{max-width:200px}
 .prow{display:grid;grid-template-columns:72px minmax(0,1fr) 170px 100px;gap:var(--s3);align-items:center;padding:6px var(--s4);border-bottom:1px solid var(--rule)}
 .prow:last-child{border-bottom:0}
 .prow.head{position:sticky;top:0;background:var(--surface);z-index:1;font-size:12px;color:var(--ink-3);font-weight:700}
@@ -401,7 +408,8 @@ details.more summary::-webkit-details-marker{display:none}
   .datarow{padding:var(--s4)}
   .scrim{align-items:flex-end;padding:0}
   .sheet{border-radius:var(--r-lg) var(--r-lg) 0 0;max-height:92vh;transform:translateY(24px);padding-bottom:env(safe-area-inset-bottom)}
-  .sheet-f{border-radius:0}
+  .sheet-f{border-radius:0;flex-wrap:wrap}
+  .sheet-f .grow{flex-basis:100%;font-size:12px}
   .sheet-b{padding:0 var(--s4) var(--s4)}
   .formgrid{grid-template-columns:1fr;gap:var(--s1)}
   .prow{grid-template-columns:minmax(0,1fr) auto;grid-template-areas:"s a" "d c";row-gap:2px}
@@ -603,6 +611,17 @@ function autoSortNew(){
     if(c!==UNCAT && t.cat!==c){ t.cat=c; ops.push({op:'txSet', id:t.id, fields:{cat:c}}); } });
   if(ops.length){ commit(ops); render(); toast(`分類の見直しで${ops.length}件のカテゴリを直しました`); }
 }
+// カード明細で「計上月」と「利用日の月」がずれているもの（まとめて読み込んだときの取り違え）
+function misplaced(){ return state.tx.filter(t=>t.src!=='manual' && t.date && t.month!==t.date.slice(0,7)); }
+function askFixMonths(){
+  const list = misplaced(); if(!list.length){ toast('ずれている明細はありません'); return; }
+  const moves = {}; list.forEach(t=>{ const k=`${ymLabel(t.month)} → ${ymLabel(t.date.slice(0,7))}`; moves[k]=(moves[k]||0)+1; });
+  const lines = Object.entries(moves).sort((a,b)=>b[1]-a[1]);
+  confirmSheet('明細の月を利用日にそろえる', `カード明細${list.length}件を、利用日の月に移します。<br><br>${lines.slice(0,8).map(([k,n])=>`${k}：${n}件`).join('<br>')}${lines.length>8?`<br>ほか${lines.length-8}通り`:''}<br><br>手入力の明細と、各月の収入はそのままです。`, `${list.length}件を移す`, ()=>{
+    const ops = list.map(t=>{ t.month=t.date.slice(0,7); return {op:'txSet', id:t.id, fields:{month:t.month}}; });
+    commit(ops); render(); toast(`${ops.length}件を利用日の月に移しました`);
+  });
+}
 function setupLink(withName){
   const o = {u:cfg.url, k:cfg.key}; if(withName) o.n = cfg.name;
   return location.origin + location.pathname + '#setup=' + btoa(unescape(encodeURIComponent(JSON.stringify(o)))).replace(/=+$/,'');
@@ -779,6 +798,8 @@ function render(){
   else {
     if(demo) html += `<div class="banner"><span class="grow">デモ表示中です。サンプルのデータで、実際には保存されません。</span><button class="btn text" style="height:32px" data-act="endDemo">接続の設定に戻る</button></div>`;
     if(sync.status==='auth') html += `<div class="banner warn"><span class="grow">合言葉が変わったため、データを読み書きできません。新しい接続リンクを開くか、設定し直してください。</span><button class="btn text" style="height:32px" data-act="disconnect">設定し直す</button></div>`;
+    const mp = misplaced().filter(t=>t.month===ui.month);
+    if(ui.tab==='month' && mp.length>=10) html += `<div class="banner warn"><span class="grow">${ymLabel(ui.month)}に、ほかの月に使った明細が${mp.length}件入っています（複数の明細をまとめて読み込んだときの取り違えです）。</span><button class="btn primary" style="height:36px" data-act="fixMonths">利用日の月に直す</button></div>`;
     if(ui.tab==='month') html += renderMonth();
     if(ui.tab==='tx') html += renderTx();
     if(ui.tab==='trend') html += renderTrend();
@@ -1141,6 +1162,7 @@ function renderSettings(){
     <div class="panel-h"><h2>データ</h2><span class="sub">本体は Google スプレッドシート「明細」「月」「設定」シートにあります</span></div>
     <div class="datarow"><div class="txt"><b>バックアップ</b><p>全データを1つの JSON ファイルに書き出し／読み込みします。読み込むと共有中のデータが置き換わります（以前のPC版から移すときにも使えます）。</p></div>
       <button class="btn" data-act="exportJson">書き出す</button><button class="btn pc-only" data-act="importJson">読み込む</button></div>
+    <div class="datarow"><div class="txt"><b>明細の月を利用日にそろえる</b><p>カード明細が、使った月と違う月に入っているときに直します。いまずれているのは${misplaced().length}件です。</p></div><button class="btn" data-act="fixMonths" ${misplaced().length?'':'disabled'}>そろえる</button></div>
     <div class="datarow pc-only"><div class="txt"><b>すべてのデータを削除</b><p>明細・収入・予算・ルールをすべて消します。家族の端末からも消えます。元に戻せません。</p></div><button class="btn danger" data-act="wipe">削除する</button></div>
   </section>`;
 }
@@ -1226,7 +1248,7 @@ async function handleFiles(files){
   all.sort((a,b)=>a.date.localeCompare(b.date));
   const cnt={}; all.forEach(r=>{const m=r.date.slice(0,7); cnt[m]=(cnt[m]||0)+1;});
   const month = Object.entries(cnt).sort((a,b)=>b[1]-a[1])[0][0];
-  pending = {rows:all, how:[...new Set(hows)].join(' / '), files:names, month, split:false};
+  pending = {rows:all, how:[...new Set(hows)].join(' / '), files:names, month, split:true};
   renderImportPreview();
 }
 
@@ -1254,6 +1276,9 @@ function renderImportPreview(){
   const total = rows.filter(r=>!r.dup).reduce((s,r)=>s+r.amount,0);
   const months = [...new Set(rows.map(r=>r.date.slice(0,7)))].sort();
   const opts = new Set([...months, ymShift(months[months.length-1],1), ui.month]);
+  const cnt = {}; rows.filter(r=>!r.dup).forEach(r=>{ const m=r.date.slice(0,7); cnt[m]=(cnt[m]||0)+1; });
+  const byMonth = Object.entries(cnt).sort();
+  const spanMonths = byMonth.filter(([,c])=>c>=3).length; // 前月分の数件（請求書のはみ出し）は数えない
   openSheet(`
     <div class="sheet-h"><h2>読み込む内容の確認</h2><button class="iconbtn" data-act="close" aria-label="閉じる">${ico('x')}</button></div>
     <div class="sheet-b">
@@ -1265,12 +1290,13 @@ function renderImportPreview(){
         <div><span class="label">未分類</span><b>${rows.filter(r=>!r.dup&&r.cat===UNCAT).length}件</b></div>
       </div>
       <div class="formgrid">
-        <span class="label">計上する月</span>
-        <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap">
-          <select class="field" id="impMonth" ${p.split?'disabled':''}>${[...opts].sort().map(m=>`<option value="${m}" ${m===p.month?'selected':''}>${ymLabel(m)}</option>`).join('')}</select>
-          <label style="display:flex;gap:6px;align-items:center;font-size:13px;color:var(--ink-2)"><input type="checkbox" id="impSplit" ${p.split?'checked':''}> 利用日の月ごとに分ける</label>
+        <span class="label">どの月の支出にするか</span>
+        <div class="impmode">
+          <label><input type="radio" name="impMode" value="split" ${p.split?'checked':''}><span><b>利用日の月ごとに分ける（おすすめ）</b><small>${byMonth.map(([m,c])=>`${+m.slice(5)}月 ${c}件`).join('・')}</small></span></label>
+          <label><input type="radio" name="impMode" value="one" ${p.split?'':'checked'}><span><b>すべて1つの月にまとめる</b>
+            <select class="field" id="impMonth" ${p.split?'disabled':''}>${[...opts].sort().map(m=>`<option value="${m}" ${m===p.month?'selected':''}>${ymLabel(m)}</option>`).join('')}</select></span></label>
+          ${!p.split && spanMonths>2 ? `<p class="err">${spanMonths}か月分の明細が、すべて${ymLabel(p.month)}に入ります。複数の月の明細をまとめて読み込むときは「利用日の月ごとに分ける」を選んでください。</p>`:''}
         </div>
-        <span></span><span class="small">1枚の請求書をその月の給料と比べるなら「計上する月」を、利用した月で見るならチェックを入れてください。</span>
       </div>
       <div class="preview">
         <div class="prow head"><span>利用日</span><span>店名・内容</span><span>カテゴリ</span><span class="num">金額</span></div>
@@ -1379,6 +1405,7 @@ document.addEventListener('click', e=>{
   else if(a==='demo') startDemo();
   else if(a==='endDemo'){ demo=false; state=blank(); render(); }
   else if(a==='retry') refresh(true);
+  else if(a==='fixMonths') askFixMonths();
   else if(a==='refreshNow'){ refresh(true).then(()=>toast(sync.status==='ok'?'最新の内容にしました':'接続できませんでした。通信状態を確かめてください')); }
   else if(a==='disconnect') disconnect();
   else if(a==='askDisconnect') confirmSheet('接続を解除', `この端末からは家計簿が見られなくなります。データはスプレッドシートに残ります。${queue.length?`<br>未送信の変更${queue.length}件は失われます。`:''}`, '解除する', disconnect, true);
@@ -1420,8 +1447,8 @@ document.addEventListener('change', e=>{
     pending.rows.forEach(x=>{ if(storeKey(x.store)===key) x.cat=t.value; }); commit([{op:'learn', key, cat:t.value}]);
     const sc=document.querySelector('.preview').scrollTop; renderImportPreview(); document.querySelector('.preview').scrollTop=sc;
   }
-  else if(t.id==='impMonth'){ pending.month=t.value; }
-  else if(t.id==='impSplit'){ pending.split=t.checked; $('#impMonth').disabled=t.checked; }
+  else if(t.name==='impMode'){ pending.split = t.value==='split'; const sc=document.querySelector('.preview').scrollTop; renderImportPreview(); document.querySelector('.preview').scrollTop=sc; }
+  else if(t.id==='impMonth'){ pending.month=t.value; renderImportPreview(); }
   else if(t.id==='sUrl'){ const o=parseSetup(t.value); if(o){ t.value=o.u; if(!$('#sKey').value) $('#sKey').value=o.k; if(o.n && !$('#sName').value) $('#sName').value=o.n; } }
   else if(t.dataset.rulecat!==undefined){ state.rules[+t.dataset.rulecat].cat=t.value; commit([{op:'set', key:'rules', value:state.rules}]); }
   else if(t.dataset.inc){ const v=parseAmount(t.value)||0; commit([setMonth(ui.month,{[t.dataset.inc]:v})]); render(); }
